@@ -60,54 +60,6 @@ class Module(models.Model):
         self.duration = str(timedelta(seconds=time))
         super().save(*args, **kwargs)
 
-class Video(models.Model):
-    name = models.CharField(max_length=2000, null=True, blank=True)
-    number=models.IntegerField(blank=True,null=True, default=0)
-    course=models.ForeignKey(Course,on_delete=models.SET_NULL,blank=True,null=True)
-    module = models.ForeignKey(Module, on_delete=models.CASCADE, blank=True, null=True)
-    video = models.FileField(null=True, blank=True)
-    duration = models.IntegerField(default=0)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        try:
-            cmd = ['ffprobe', '-i', self.video.path, '-show_entries', 'format=duration', '-v', 'quiet', '-of', 'csv=p=0']
-            output = subprocess.check_output(cmd)
-            self.duration = int(float(output))
-        except Exception as e:
-            print(f"Error getting video duration: {e}")
-
-class Comment(models.Model):
-    user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
-    description=RichTextField(null=True, blank=True)
-    video = models.ForeignKey(Video, null=True, blank=True, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, null=True, blank=True, on_delete=models.CASCADE)
-    def save(self, *args, **kwargs):
-        if self.video and self.course:
-            raise ValueError("Comment can only be linked to a video or a Course, not both.")
-        super().save(*args, **kwargs)
-    
-
-
-class SubComment(models.Model):
-    user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
-    comment=models.ForeignKey(Comment, on_delete=models.CASCADE,null=True,blank=True)
-    description=RichTextField(null=True, blank=True)
-
-class Notes(models.Model):
-    user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
-    description=RichTextField(null=True, blank=True) 
-    number=models.IntegerField(blank=True,null=True, default=0) 
-    video = models.ForeignKey(Video, null=True, blank=True, on_delete=models.CASCADE)
-    module = models.ForeignKey(Module, null=True, blank=True, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, null=True, blank=True, on_delete=models.CASCADE)
-    
-    def save(self, *args, **kwargs):
-        foreign_key_count = sum([bool(getattr(self, f)) for f in ['video', 'module', 'course']])
-        if foreign_key_count > 1:
-            raise ValueError("Comment can only be linked to one of video, module, or Course.")
-        super().save(*args, **kwargs) 
-
 class UserProgress(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, blank=True, null=True)
@@ -155,21 +107,6 @@ class CourseProgress(models.Model):
         super().save(*args, **kwargs)
 
 
-
-
-class Quiz(models.Model):
-    video = models.ForeignKey(Video, on_delete=models.CASCADE)
-    start_time = models.DurationField(default=timedelta(seconds=0))
-    pass_mark = models.FloatField(default=0)
-
-class Question(models.Model):
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
-    text = models.CharField(max_length=1000)
-
-class Answer(models.Model):
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    text = models.CharField(max_length=1000)
-    is_correct = models.BooleanField(default=False)
 
 class Monitor(models.Model):
     user=models.OneToOneField(User, on_delete=models.CASCADE,null=True,blank=True)
